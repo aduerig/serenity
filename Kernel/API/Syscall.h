@@ -9,6 +9,7 @@
 #include <AK/Types.h>
 #include <AK/Userspace.h>
 #include <Kernel/API/POSIX/sched.h>
+#include <LibKeyboard/CharacterMapData.h>
 
 #ifdef KERNEL
 #    include <AK/Error.h>
@@ -332,11 +333,11 @@ struct SC_futex_params {
 };
 
 struct SC_setkeymap_params {
-    u32 const* map;
-    u32 const* shift_map;
-    u32 const* alt_map;
-    u32 const* altgr_map;
-    u32 const* shift_altgr_map;
+    struct ::Keyboard::CharacterMapLayer const map;
+    struct ::Keyboard::CharacterMapLayer const shift_map;
+    struct ::Keyboard::CharacterMapLayer const alt_map;
+    struct ::Keyboard::CharacterMapLayer const altgr_map;
+    struct ::Keyboard::CharacterMapLayer const shift_altgr_map;
     StringArgument map_name;
 };
 
@@ -351,11 +352,11 @@ struct SC_jail_attach_params {
 };
 
 struct SC_getkeymap_params {
-    u32* map;
-    u32* shift_map;
-    u32* alt_map;
-    u32* altgr_map;
-    u32* shift_altgr_map;
+    struct ::Keyboard::CharacterMapLayer map;
+    struct ::Keyboard::CharacterMapLayer shift_map;
+    struct ::Keyboard::CharacterMapLayer alt_map;
+    struct ::Keyboard::CharacterMapLayer altgr_map;
+    struct ::Keyboard::CharacterMapLayer shift_altgr_map;
     MutableBufferArgument<char, size_t> map_name;
 };
 

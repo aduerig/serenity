@@ -44,13 +44,21 @@ public:
         KeymapData();
         NonnullOwnPtr<KString> character_map_name;
         Keyboard::CharacterMapData character_map;
+        void InitializeCharacterMapData(Keyboard::CharacterMapData&);
+    };
+
+    struct KeymapCodepoints {
+        u32* codepoints;
+        u8 size;
     };
 
     SpinlockProtected<KeymapData, LockRank::None>& keymap_data() { return m_keymap_data; }
 
-    u32 get_char_from_character_map(KeyEvent, bool) const;
+    KeymapCodepoints get_codepoints_from_character_map(unsigned, u32) const;
+    u32 codepoint_unless(u32, KeyEvent, bool) const;
 
     void set_client(KeyboardClient* client);
+    void set_maps_new(NonnullOwnPtr<KString> character_map_name, NonnullOwnPtr<Keyboard::CharacterMapData> const& character_map);
     void set_maps(NonnullOwnPtr<KString> character_map_name, Keyboard::CharacterMapData const& character_map);
 
     void attach_standalone_hid_device(HIDDevice&);

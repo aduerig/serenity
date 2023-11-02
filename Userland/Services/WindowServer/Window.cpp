@@ -516,7 +516,7 @@ void Window::handle_keydown_event(KeyEvent const& event)
 
             // The lowest byte serves as our index into the character table.
             auto index = event.scancode() & 0xff;
-            u32 character = to_ascii_lowercase(character_map.character_map_data().map[index]);
+            u32 character = to_ascii_lowercase(character_map.character_map_data().map.entries[index][0]);
 
             Menu* menu_to_open = nullptr;
             m_menubar.for_each_menu([&](Menu& menu) {

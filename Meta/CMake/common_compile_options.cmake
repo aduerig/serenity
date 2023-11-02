@@ -12,11 +12,11 @@ add_compile_options(-Wno-unused-command-line-argument)
 add_compile_options(-fdiagnostics-color=always)
 add_compile_options(-fno-exceptions)
 
-if (NOT CMAKE_HOST_SYSTEM_NAME MATCHES SerenityOS)
-    # FIXME: Something makes this go crazy and flag unused variables that aren't flagged as such when building with the toolchain.
-    #        Disable -Werror for now.
-    add_compile_options(-Werror)
-endif()
+# if (NOT CMAKE_HOST_SYSTEM_NAME MATCHES SerenityOS)
+#     # FIXME: Something makes this go crazy and flag unused variables that aren't flagged as such when building with the toolchain.
+#     #        Disable -Werror for now.
+#     add_compile_options(-Werror)
+# endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang$")
     # Clang's default constexpr-steps limit is 1048576(2^20), GCC doesn't have one

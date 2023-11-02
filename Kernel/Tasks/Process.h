@@ -439,7 +439,9 @@ public:
     ErrorOr<FlatPtr> sys$mknod(Userspace<Syscall::SC_mknod_params const*>);
     ErrorOr<FlatPtr> sys$realpath(Userspace<Syscall::SC_realpath_params const*>);
     ErrorOr<FlatPtr> sys$getrandom(Userspace<void*>, size_t, unsigned int);
+    ErrorOr<void> getkeymap_helper(size_t, Keyboard::CharacterMapLayer const&, Keyboard::CharacterMapLayer&);
     ErrorOr<FlatPtr> sys$getkeymap(Userspace<Syscall::SC_getkeymap_params const*>);
+    ErrorOr<void> setkeymap_helper(size_t, Keyboard::CharacterMapLayer&, Keyboard::CharacterMapLayer const&);
     ErrorOr<FlatPtr> sys$setkeymap(Userspace<Syscall::SC_setkeymap_params const*>);
     ErrorOr<FlatPtr> sys$profiling_enable(pid_t, u64);
     ErrorOr<FlatPtr> profiling_enable(pid_t, u64 event_mask);

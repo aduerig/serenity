@@ -112,13 +112,13 @@ int serenity_readlink(char const* path, size_t path_length, char* buffer, size_t
     __RETURN_WITH_ERRNO(rc, rc, -1);
 }
 
-int setkeymap(char const* name, u32 const* map, u32* const shift_map, u32 const* alt_map, u32 const* altgr_map, u32 const* shift_altgr_map)
+int setkeymap(char const* name, Keyboard::CharacterMapLayer const map, Keyboard::CharacterMapLayer const shift_map, Keyboard::CharacterMapLayer const alt_map, Keyboard::CharacterMapLayer const altgr_map, Keyboard::CharacterMapLayer const shift_altgr_map)
 {
     Syscall::SC_setkeymap_params params { map, shift_map, alt_map, altgr_map, shift_altgr_map, { name, strlen(name) } };
     return syscall(SC_setkeymap, &params);
 }
 
-int getkeymap(char* name_buffer, size_t name_buffer_size, u32* map, u32* shift_map, u32* alt_map, u32* altgr_map, u32* shift_altgr_map)
+int getkeymap(char* name_buffer, size_t name_buffer_size, Keyboard::CharacterMapLayer map, Keyboard::CharacterMapLayer shift_map, Keyboard::CharacterMapLayer alt_map, Keyboard::CharacterMapLayer altgr_map, Keyboard::CharacterMapLayer shift_altgr_map)
 {
     Syscall::SC_getkeymap_params params {
         map,

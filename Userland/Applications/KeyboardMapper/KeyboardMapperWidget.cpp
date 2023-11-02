@@ -64,13 +64,18 @@ void KeyboardMapperWidget::create_frame()
                 VERIFY(index > 0);
 
                 tmp_button.set_text(value);
-                u32* map = map_from_name(m_current_map_name);
+                Keyboard::CharacterMapLayer map = map_from_name(m_current_map_name);
 
-                if (value.is_empty())
-                    map[index] = '\0'; // Empty string
-                else
-                    map[index] = value.bytes().at(0);
-
+                if (value.is_empty()) {
+                    // !TODO probably need to resize here.
+                    map.entries[index][0] = '\0'; // Empty string
+                } else {
+                    // !TODO probably need to resize here too.
+                    Utf8View view = value.code_points();
+                    for (auto code_point = view.begin(); code_point != view.end(); ++code_point) {
+                        map.entries[index][code_point - view.begin()] = *code_point;
+                    }
+                }
                 window()->set_modified(true);
             }
         };
@@ -106,9 +111,9 @@ void KeyboardMapperWidget::add_map_radio_button(const StringView map_name, Strin
     };
 }
 
-u32* KeyboardMapperWidget::map_from_name(const StringView map_name)
+Keyboard::CharacterMapLayer KeyboardMapperWidget::map_from_name(const StringView map_name)
 {
-    u32* map;
+    Keyboard::CharacterMapLayer map;
     if (map_name == "map"sv) {
         map = m_character_map.map;
     } else if (map_name == "shift_map"sv) {
@@ -127,6 +132,7 @@ u32* KeyboardMapperWidget::map_from_name(const StringView map_name)
 
 ErrorOr<void> KeyboardMapperWidget::load_map_from_file(DeprecatedString const& filename)
 {
+    dbgln("LOADING MAP FROM FILE");
     auto character_map = TRY(Keyboard::CharacterMapFile::load_from_file(filename));
 
     m_filename = filename;
@@ -145,6 +151,8 @@ ErrorOr<void> KeyboardMapperWidget::load_map_from_file(DeprecatedString const& f
 
 ErrorOr<void> KeyboardMapperWidget::load_map_from_system()
 {
+    dbgln("LOADING MAP FROM CharacterMap::fetch_system_map()");
+
     auto character_map = TRY(Keyboard::CharacterMap::fetch_system_map());
 
     m_filename = DeprecatedString::formatted("/res/keymaps/{}.json", character_map.character_map_name());
@@ -169,12 +177,14 @@ ErrorOr<void> KeyboardMapperWidget::save_to_file(StringView filename)
 {
     JsonObject map_json;
 
-    auto add_array = [&](DeprecatedString name, u32* values) {
+    auto add_array = [&](DeprecatedString name, Keyboard::CharacterMapLayer values) {
         JsonArray items;
         for (int i = 0; i < 90; i++) {
             StringBuilder sb;
-            if (values[i])
-                sb.append_code_point(values[i]);
+            for (size_t j = 0; j < values.entry_sizes[i]; j++) {
+                if (values.entries[i][j])
+                    sb.append_code_point(values.entries[i][j]);
+            }
 
             JsonValue val(sb.to_deprecated_string());
             items.must_append(move(val));
@@ -237,7 +247,7 @@ void KeyboardMapperWidget::keyup_event(GUI::KeyEvent& event)
 void KeyboardMapperWidget::set_current_map(const DeprecatedString current_map)
 {
     m_current_map_name = current_map;
-    u32* map = map_from_name(m_current_map_name);
+    Keyboard::CharacterMapLayer map = map_from_name(m_current_map_name);
 
     for (unsigned k = 0; k < KEY_COUNT; k++) {
         auto index = keys[k].map_index;
@@ -245,9 +255,12 @@ void KeyboardMapperWidget::set_current_map(const DeprecatedString current_map)
             continue;
 
         StringBuilder sb;
-        sb.append_code_point(map[index]);
-
+        for (size_t i = 0; i < map.entry_sizes[index]; i++) {
+            dbgln("map.entry_sizes[index]: {}, map.entries[index][0]: {}", map.entry_sizes[index], map.entries[index][0]);
+            sb.append_code_point(map.entries[index][i]);
+        }
         m_keys.at(k)->set_text(sb.to_string().release_value_but_fixme_should_propagate_errors());
+        dbgln("m_keys.at(k)->text(): {}", m_keys.at(k)->text());
     }
 
     this->update();

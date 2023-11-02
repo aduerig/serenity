@@ -20,8 +20,9 @@ namespace Kernel {
 Atomic<bool> g_caps_lock_remapped_to_ctrl;
 static Singleton<HIDManagement> s_the;
 
+// #define CHAR_MAP_SIZE 0x80
 // clang-format off
-static constexpr Keyboard::CharacterMapData DEFAULT_CHARACTER_MAP =
+static constexpr Keyboard::CharacterMapDataSingleU32 DEFAULT_CHARACTER_MAP =
 {
     .map = {
         0,    '\033',    '1',    '2',    '3',    '4',    '5',    '6',    '7',    '8',    '9',    '0',    '-',    '=',    0x08,
@@ -96,10 +97,35 @@ size_t HIDManagement::generate_minor_device_number_for_keyboard()
     return m_keyboard_minor_number++;
 }
 
+void HIDManagement::KeymapData::InitializeCharacterMapData(Keyboard::CharacterMapData& keymap)
+{
+    for (size_t i = 0; i < CHAR_MAP_SIZE; i++) {
+        keymap.map.entry_sizes[i] = 1;
+        keymap.map.entries[i] = new u32[1];
+        keymap.map.entries[i][0] = DEFAULT_CHARACTER_MAP.map[i];
+
+        keymap.shift_map.entry_sizes[i] = 1;
+        keymap.shift_map.entries[i] = new u32[1];
+        keymap.shift_map.entries[i][0] = DEFAULT_CHARACTER_MAP.shift_map[i];
+
+        keymap.alt_map.entry_sizes[i] = 1;
+        keymap.alt_map.entries[i] = new u32[1];
+        keymap.alt_map.entries[i][0] = DEFAULT_CHARACTER_MAP.alt_map[i];
+
+        keymap.altgr_map.entry_sizes[i] = 1;
+        keymap.altgr_map.entries[i] = new u32[1];
+        keymap.altgr_map.entries[i][0] = DEFAULT_CHARACTER_MAP.altgr_map[i];
+
+        keymap.shift_altgr_map.entry_sizes[i] = 1;
+        keymap.shift_altgr_map.entries[i] = new u32[1];
+        keymap.shift_altgr_map.entries[i][0] = DEFAULT_CHARACTER_MAP.shift_altgr_map[i];
+    }
+}
+
 UNMAP_AFTER_INIT HIDManagement::KeymapData::KeymapData()
     : character_map_name(KString::must_create("en-us"sv))
-    , character_map(DEFAULT_CHARACTER_MAP)
 {
+    InitializeCharacterMapData(character_map);
 }
 
 UNMAP_AFTER_INIT HIDManagement::HIDManagement()
@@ -110,6 +136,10 @@ void HIDManagement::set_maps(NonnullOwnPtr<KString> character_map_name, Keyboard
 {
     m_keymap_data.with([&](auto& keymap_data) {
         keymap_data.character_map_name = move(character_map_name);
+
+        for (size_t i = 0; i < CHAR_MAP_SIZE; i++) {
+            kfree_sized(keymap_data.character_map.map.entries[i], keymap_data.character_map.map.entry_sizes[i]);
+        }
         keymap_data.character_map = character_map_data;
         dbgln("New Character map '{}' passed in by client.", keymap_data.character_map_name);
     });
@@ -188,47 +218,55 @@ HIDManagement& HIDManagement::the()
     return *s_the;
 }
 
-u32 HIDManagement::get_char_from_character_map(KeyEvent event, bool num_lock_on) const
+HIDManagement::KeymapCodepoints HIDManagement::get_codepoints_from_character_map(unsigned modifiers, u32 index) const
+{
+    KeymapCodepoints codepoints;
+    m_keymap_data.with([&](auto& keymap_data) {
+        if (modifiers & Mod_Alt) {
+            codepoints.codepoints = keymap_data.character_map.alt_map.entries[index];
+            codepoints.size = keymap_data.character_map.alt_map.entry_sizes[index];
+        } else if ((modifiers & Mod_Shift) && (modifiers & Mod_AltGr)) {
+            codepoints.codepoints = keymap_data.character_map.shift_altgr_map.entries[index];
+            codepoints.size = keymap_data.character_map.shift_altgr_map.entry_sizes[index];
+        } else if (modifiers & Mod_Shift) {
+            codepoints.codepoints = keymap_data.character_map.shift_map.entries[index];
+            codepoints.size = keymap_data.character_map.shift_map.entry_sizes[index];
+        } else if (modifiers & Mod_AltGr) {
+            codepoints.codepoints = keymap_data.character_map.altgr_map.entries[index];
+            codepoints.size = keymap_data.character_map.altgr_map.entry_sizes[index];
+        } else {
+            codepoints.codepoints = keymap_data.character_map.map.entries[index];
+            codepoints.size = keymap_data.character_map.map.entry_sizes[index];
+        }
+    });
+    return codepoints;
+}
+
+u32 HIDManagement::codepoint_unless(u32 codepoint, KeyEvent event, bool num_lock_on) const
 {
     auto modifiers = event.modifiers();
-    auto index = event.scancode & 0xFF; // Index is last byte of scan code.
-    auto caps_lock_on = event.caps_lock_on;
 
-    u32 code_point = 0;
-    m_keymap_data.with([&](auto& keymap_data) {
-        if (modifiers & Mod_Alt)
-            code_point = keymap_data.character_map.alt_map[index];
-        else if ((modifiers & Mod_Shift) && (modifiers & Mod_AltGr))
-            code_point = keymap_data.character_map.shift_altgr_map[index];
-        else if (modifiers & Mod_Shift)
-            code_point = keymap_data.character_map.shift_map[index];
-        else if (modifiers & Mod_AltGr)
-            code_point = keymap_data.character_map.altgr_map[index];
-        else
-            code_point = keymap_data.character_map.map[index];
-    });
-
-    if (caps_lock_on && (modifiers == 0 || modifiers == Mod_Shift)) {
-        if (code_point >= 'a' && code_point <= 'z')
-            code_point &= ~0x20;
-        else if (code_point >= 'A' && code_point <= 'Z')
-            code_point |= 0x20;
+    if (event.caps_lock_on && (modifiers == 0 || modifiers == Mod_Shift)) {
+        if (codepoint >= 'a' && codepoint <= 'z')
+            codepoint &= ~0x20;
+        else if (codepoint >= 'A' && codepoint <= 'Z')
+            codepoint |= 0x20;
     }
 
     if (event.e0_prefix && event.key == Key_Slash) {
         // If Key_Slash (scancode = 0x35) mapped to other form "/", we fix num pad key of "/" with this case.
-        code_point = '/';
+        codepoint = '/';
     } else if (event.e0_prefix && event.key != Key_Return) {
         // Except for `keypad-/` and 'keypad-return', all e0 scan codes are not actually characters. i.e., `keypad-0` and
-        // `Insert` have the same scancode except for the prefix, but insert should not have a code_point.
-        code_point = 0;
+        // `Insert` have the same scancode except for the prefix, but insert should not have a codepoint.
+        codepoint = 0;
     } else if (!num_lock_on && !event.e0_prefix && event.scancode >= 0x47 && event.scancode <= 0x53 && event.key != Key_Minus && event.key != Key_Plus) {
         // When Num Lock is off, some numpad keys have the same function as some of the extended keys like Home, End, PgDown, arrows etc.
-        // These keys should have the code_point set to 0.
-        code_point = 0;
+        // These keys should have the codepoint set to 0.
+        codepoint = 0;
     }
 
-    return code_point;
+    return codepoint;
 }
 
 }

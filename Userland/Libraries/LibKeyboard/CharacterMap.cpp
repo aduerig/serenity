@@ -27,6 +27,7 @@ CharacterMap::CharacterMap(DeprecatedString const& map_name, CharacterMapData co
 
 int CharacterMap::set_system_map()
 {
+    dbgln("CharacterMap::set_system_map(): {}", m_character_map_name);
     return setkeymap(m_character_map_name.characters(), m_character_map_data.map, m_character_map_data.shift_map, m_character_map_data.alt_map, m_character_map_data.altgr_map, m_character_map_data.shift_altgr_map);
 }
 

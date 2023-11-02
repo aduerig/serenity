@@ -8,6 +8,7 @@
 
 #include <Kernel/API/POSIX/futex.h>
 #include <Kernel/API/POSIX/serenity.h>
+#include <LibKeyboard/CharacterMapData.h>
 #include <stdio.h>
 #include <sys/cdefs.h>
 #include <time.h>
@@ -63,8 +64,8 @@ int anon_create(size_t size, int options);
 
 int serenity_readlink(char const* path, size_t path_length, char* buffer, size_t buffer_size);
 
-int getkeymap(char* name_buffer, size_t name_buffer_size, uint32_t* map, uint32_t* shift_map, uint32_t* alt_map, uint32_t* altgr_map, uint32_t* shift_altgr_map);
-int setkeymap(char const* name, uint32_t const* map, uint32_t* const shift_map, uint32_t const* alt_map, uint32_t const* altgr_map, uint32_t const* shift_altgr_map);
+int getkeymap(char* name_buffer, size_t name_buffer_size, Keyboard::CharacterMapLayer map, Keyboard::CharacterMapLayer shift_map, Keyboard::CharacterMapLayer alt_map, Keyboard::CharacterMapLayer altgr_map, Keyboard::CharacterMapLayer shift_altgr_map);
+int setkeymap(char const* name, Keyboard::CharacterMapLayer const map, Keyboard::CharacterMapLayer const shift_map, Keyboard::CharacterMapLayer const alt_map, Keyboard::CharacterMapLayer const altgr_map, Keyboard::CharacterMapLayer const shift_altgr_map);
 
 uint16_t internet_checksum(void const* ptr, size_t count);
 
